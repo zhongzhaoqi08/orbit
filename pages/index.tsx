@@ -1,6 +1,7 @@
 // pages/index.tsx
 import React, { useEffect, useRef, useState } from "react";
 
+
 /* ──────────────────────────────────────────────────────────────────────────────
    Device profiles (illustrative; *not* manufacturer specs)
    anchors: attenuation in dB vs frequency (negative = cut, positive = boost)
@@ -693,11 +694,11 @@ export default function Home() {
 if (!mounted) return null;
   // ── RENDER ──────────────────────────────────────────────────────────────────
   return (
-    <div className="orbit-bg" style={UI.page}>
+    <div className="orbit-bg" >
       <div style={UI.wrap}>
 
         {/* HERO CARD */}
-        <div style={UI.hero} className="orbit-surface">
+        <div  className="orbit-surface">
           <div style={UI.phoneDeco} />
 
           {/* player + chips */}
@@ -746,17 +747,15 @@ if (!mounted) return null;
                 { k: "samsung_tv_approx",   icon: "📺", label: "TV" },
                 { k: "airpods_pro_approx",  icon: "🎧", label: "AirPods" },
               ].map((d) => (
-                <button
-                  key={d.k}
-                  onClick={() => setDeviceKey(d.k as DeviceKey)}
-                  style={UI.chip(deviceKey === (d.k as DeviceKey))}
-                  title={d.label}
-                  className="orbit-button"
-  data-active={deviceKey === d.key}   // 按你项目真实变量
-  onClick={() => setDeviceKey(d.key)} // 按你项目真实函数
-                >
-                  <span style={{ fontSize: 20 }}>{d.icon}</span>
-                </button>
+           <button
+  key={d.k}
+  className="orbit-button"
+  data-active={deviceKey === (d.k as DeviceKey)}
+  onClick={() => setDeviceKey(d.k as DeviceKey)}
+  title={d.label}
+>
+  <span style={{ fontSize: 20 }}>{d.icon}</span>
+</button>
               ))}
             </div>
 
