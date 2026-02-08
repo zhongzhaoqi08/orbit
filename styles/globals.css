@@ -1,108 +1,284 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
-/* === ORBIT THEME === */
+/* styles/globals.css */
 
 :root{
-  --bg: #E9ECF6;
-  --surface: #E9ECF6;
-  --shadow-dark: #C5CAD6;
-  --shadow-light: #FFFFFF;
+  --bg0:#eef1f7;
+  --bg1:#ffeef5;
+  --bg2:#eef0ff;
 
-  --primary: #775CFF;
-  --text: #1E1F23;
-  --muted: #6B7280;
+  --panel:#eef1f7;
+  --panel-hi: rgba(255,255,255,.9);
+  --panel-lo: rgba(20,24,40,.12);
 
-  --r-lg: 24px;
+  --text:#0f1222;
+  --muted:#7b8196;
+
+  --brand:#775cff;
+  --brand2:#a98cff;
+  --brand3:#d6c8ff;
+
+  --radius-xl:28px;
+  --radius-lg:22px;
+  --radius-md:16px;
+
+  --shadow-out: 18px 18px 36px rgba(20,24,40,.10), -18px -18px 36px rgba(255,255,255,.85);
+  --shadow-in: inset 10px 10px 20px rgba(20,24,40,.08), inset -10px -10px 20px rgba(255,255,255,.9);
+  --ring: 0 0 0 3px rgba(119,92,255,.35);
 }
 
-.orbit-surface{
-  background: var(--surface);
-  border-radius: var(--r-lg);
-  box-shadow:
-    12px 12px 24px var(--shadow-dark),
-   -12px -12px 24px var(--shadow-light);
-}
-
-.orbit-inset{
-  background: var(--surface);
-  border-radius: var(--r-lg);
-  box-shadow:
-    inset 8px 8px 16px var(--shadow-dark),
-    inset -8px -8px 16px var(--shadow-light);
-}
-
-.orbit-button{
-  width: 64px;
-  height: 64px;
-  border-radius: 50%;
-  background: var(--surface);
-  box-shadow:
-    8px 8px 16px var(--shadow-dark),
-   -8px -8px 16px var(--shadow-light);
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  transition: all .2s ease;
-}
-
-.orbit-button[data-active="true"]{
-  background: linear-gradient(180deg,#8A7BFF,#6C5CFF);
-  box-shadow:
-    0 8px 20px rgba(119,92,255,.35);
-  color:white;
-}
-
-body{
-  background: linear-gradient(135deg,#E9ECF6,#DDE2F0);
-}
-
-
+*{ box-sizing:border-box; }
 html,body{ height:100%; }
 body{
+  margin:0;
+  color:var(--text);
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial;
   background:
-    radial-gradient(1200px 600px at 10% -10%, #ffeef3 0%, transparent 55%),
-    radial-gradient(1200px 600px at 90% -10%, #eef0ff 0%, transparent 55%),
-    var(--bg);
-  color:var(--ink);
+    radial-gradient(1200px 700px at 12% -10%, var(--bg1) 0%, transparent 58%),
+    radial-gradient(1200px 700px at 88% -10%, var(--bg2) 0%, transparent 58%),
+    linear-gradient(180deg, var(--bg0), #f6f7fb);
 }
 
-/* container */
-.orbit-wrap{ max-width:1200px; margin:0 auto; padding:24px; }
-
-/* hero card */
-.orbit-hero{
-  position:relative; padding:32px;
-  background: linear-gradient(180deg, #ffffffcc, #ffffffa6), var(--panel);
-  border-radius:var(--r-xl); border:1px solid #fff; box-shadow:var(--shadow-soft);
-  overflow:hidden;
-}
-/* decorative phone */
-.orbit-hero::after{
-  content:""; position:absolute; right:40px; top:40px; width:260px; height:160px;
-  transform:rotate(28deg); border-radius:28px; background:#e9ecf6;
-  box-shadow:inset 0 3px 0 #fff, 0 18px 48px rgba(15,18,34,.15);
+.orbit-page{
+  min-height:100vh;
+  padding:28px;
 }
 
-/* chips / buttons */
-.chip{ width:48px; height:48px; display:grid; place-items:center; border-radius:16px;
-  background:#fff; border:1px solid rgba(15,18,34,.08); box-shadow:var(--shadow-inset); }
-.chip.active{ background:linear-gradient(180deg, var(--brand), var(--brand-2)); color:#fff; }
-.btn{ padding:10px 14px; border-radius:14px; border:1px solid rgba(15,18,34,.08); background:#fff; }
-.btn-primary{ background:var(--brand); color:#fff; border-color:transparent; }
-.muted{ color:var(--muted); font-size:12px; }
+.orbit-wrap{
+  max-width:1200px;
+  margin:0 auto;
+}
+
+/* plugin surface (浮在背景上的大面板) */
+.orbit-plugin{
+  position:relative;
+  border-radius: var(--radius-xl);
+  background: rgba(238,241,247,.72);
+  backdrop-filter: blur(10px);
+  box-shadow: var(--shadow-out);
+  padding:22px;
+}
+
+/* 顶部控制区 */
+.orbit-top{
+  display:flex;
+  gap:18px;
+  align-items:flex-start;
+  justify-content:space-between;
+  margin-bottom:18px;
+}
+
+.orbit-left{
+  display:flex;
+  gap:16px;
+  align-items:flex-start;
+  min-width:520px;
+}
+
+.orbit-file{
+  position:relative;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  padding:10px 14px;
+  border-radius:999px;
+  background: var(--panel);
+  box-shadow: var(--shadow-out);
+  color:var(--text);
+  border:none;
+  cursor:pointer;
+  user-select:none;
+}
+
+.orbit-file input{
+  position:absolute;
+  inset:0;
+  opacity:0;
+  cursor:pointer;
+}
+
+.orbit-player{
+  flex:1;
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+
+.orbit-title{
+  font-weight:700;
+  letter-spacing:.2px;
+}
+
+.orbit-row{
+  display:flex;
+  gap:12px;
+  align-items:center;
+}
+
+.orbit-chip{
+  width:54px;
+  height:54px;
+  border-radius:18px;
+  background: var(--panel);
+  box-shadow: var(--shadow-out);
+  border:none;
+  cursor:pointer;
+  display:grid;
+  place-items:center;
+  color:var(--text);
+}
+
+.orbit-chip[data-active="true"]{
+  background: linear-gradient(180deg, rgba(119,92,255,.95), rgba(169,140,255,.95));
+  color:white;
+  box-shadow: 0 10px 26px rgba(119,92,255,.35), var(--shadow-out);
+}
+
+.orbit-chip span{
+  font-size:20px;
+}
 
 /* slider */
-.range{ -webkit-appearance:none; appearance:none; width:100%; height:8px;
-  background:linear-gradient(90deg, var(--brand), var(--brand-2));
-  border-radius:999px; box-shadow: inset 0 2px 8px rgba(15,18,34,.18); }
-.range::-webkit-slider-thumb{ -webkit-appearance:none; width:22px; height:22px; border-radius:50%;
-  background:#fff; border:3px solid var(--brand); box-shadow:0 6px 18px rgba(119,92,255,.35); }
-.range::-moz-range-thumb{ width:22px; height:22px; border-radius:50%; background:#fff; border:3px solid var(--brand); }
+.orbit-range{
+  -webkit-appearance:none;
+  appearance:none;
+  width:100%;
+  height:10px;
+  border-radius:999px;
+  background: var(--panel);
+  box-shadow: var(--shadow-in);
+  outline:none;
+}
 
-/* panels */
-.panel{ background:var(--panel-2); border-radius:var(--r-lg);
-  border:1px solid rgba(15,18,34,.06); box-shadow:var(--shadow-inset), var(--shadow-soft); }
-.outline-brand{ box-shadow: 0 0 0 3px var(--brand) inset; border-radius:var(--r-lg); }
-.grid-panels{ display:grid; grid-template-columns:1.2fr .8fr; gap:24px; margin-top:24px; }
+.orbit-range::-webkit-slider-thumb{
+  -webkit-appearance:none;
+  width:22px;
+  height:22px;
+  border-radius:50%;
+  background: radial-gradient(circle at 30% 30%, #fff, #f1f2f7);
+  border:3px solid rgba(119,92,255,.9);
+  box-shadow: 0 10px 22px rgba(119,92,255,.25);
+}
+
+.orbit-times{
+  display:flex;
+  justify-content:space-between;
+  color:var(--muted);
+  font-size:12px;
+}
+
+.orbit-sub{
+  color:var(--muted);
+  font-size:12px;
+}
+
+/* 右上角装饰（你 figma 那个斜着的卡片） */
+.orbit-deco{
+  position:absolute;
+  right:24px;
+  top:18px;
+  width:260px;
+  height:170px;
+  border-radius:32px;
+  transform: rotate(22deg);
+  background: rgba(238,241,247,.65);
+  box-shadow: var(--shadow-out);
+  border:1px solid rgba(255,255,255,.7);
+  pointer-events:none;
+}
+
+/* 两个 visualization 面板 */
+.orbit-grid{
+  display:grid;
+  grid-template-columns: 1.15fr .85fr;
+  gap:18px;
+}
+
+.orbit-panel{
+  border-radius: var(--radius-lg);
+  background: var(--panel);
+  box-shadow: var(--shadow-in);
+  padding:14px;
+}
+
+.orbit-panel--ring{
+  box-shadow: var(--shadow-in), var(--ring);
+}
+
+.orbit-canvas{
+  width:100%;
+  display:block;
+  border-radius: 14px;
+}
+
+/* bottom controls */
+.orbit-bottom{
+  display:flex;
+  justify-content:flex-end;
+  gap:14px;
+  align-items:center;
+  margin-top:14px;
+}
+
+.orbit-number{
+  width:72px;
+  padding:8px 10px;
+  border-radius:14px;
+  border:none;
+  background: var(--panel);
+  box-shadow: var(--shadow-in);
+  color:var(--text);
+}
+
+/* uiverse toggle (neumorphism) */
+.orbit-toggleLabel{
+  display:inline-flex;
+  align-items:center;
+  cursor:pointer;
+}
+
+.orbit-toggle{
+  isolation:isolate;
+  position:relative;
+  height:34px;
+  width:68px;
+  border-radius:999px;
+  overflow:hidden;
+  background: var(--panel);
+  box-shadow: -8px -6px 14px rgba(255,255,255,.9), 8px 6px 16px rgba(20,24,40,.12);
+}
+
+.orbit-toggleState{ display:none; }
+
+.orbit-indicator{
+  height:100%;
+  width:200%;
+  background: var(--panel);
+  border-radius:999px;
+  transform: translate3d(-75%,0,0);
+  transition: transform .35s cubic-bezier(.85,.05,.18,1.35);
+  box-shadow: -8px -6px 14px rgba(255,255,255,.9), 8px 6px 16px rgba(20,24,40,.12);
+  position:relative;
+}
+
+.orbit-indicator::after{
+  content:"";
+  position:absolute;
+  left:10px;
+  top:50%;
+  width:26px;
+  height:26px;
+  border-radius:50%;
+  transform: translateY(-50%);
+  background: radial-gradient(circle at 30% 30%, #fff, #f1f2f7);
+  box-shadow: 0 10px 18px rgba(20,24,40,.15);
+}
+
+.orbit-toggleState:checked ~ .orbit-indicator{
+  transform: translate3d(25%,0,0);
+}
+
+/* small text next to toggle */
+.orbit-toggleText{
+  margin-left:10px;
+  font-size:12px;
+  color:var(--muted);
+}

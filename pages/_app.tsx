@@ -1,11 +1,10 @@
-import "@/styles/globals.css";
 import type { AppProps } from "next/app";
-import "../styles/globals.css"
+import { AudioProvider } from "../components/AudioStore";
 
 export default function App({ Component, pageProps }: AppProps) {
   return (
-    <div className="orbit-wrap">
+    <AudioProvider>
       <Component {...pageProps} />
-    </div>
+    </AudioProvider>
   );
 }
