@@ -403,6 +403,8 @@ export default function Orbit() {
       const PURPLE_SOFT = "rgba(125,108,255,0.22)";
       const GRAY_SOFT = "rgba(0,0,0,0.10)";
 
+
+
       // ===== Spectrum =====
       analyserMix.getFloatFrequencyData(mixData);
 
@@ -485,153 +487,188 @@ export default function Orbit() {
           }
         }
       }
+// ===== Stereo Field (upper semicircle, consistent coords) =====
+{
+  const AL = analyserLRef.current!, AR = analyserRRef.current!;
+  const n = AL.fftSize;
+  const timeL = new Float32Array(n);
+  const timeR = new Float32Array(n);
+  AL.getFloatTimeDomainData(timeL);
+  AR.getFloatTimeDomainData(timeR);
 
-      // ===== Stereo Field (右半圆 90°) =====
-      const AL = analyserLRef.current!, AR = analyserRRef.current!;
-      const n = AL.fftSize;
-      const timeL = new Float32Array(n);
-      const timeR = new Float32Array(n);
-      AL.getFloatTimeDomainData(timeL);
-      AR.getFloatTimeDomainData(timeR);
+  const SW = widthPx(stereoCanvas);
+  const SH = Math.floor(stereoCanvas.height / dpr);
 
-      const SW = widthPx(stereoCanvas);
-      const SH = Math.floor(stereoCanvas.height / dpr);
+  stereoCtx.clearRect(0, 0, SW, SH);
+  const cx0 = Math.floor(SW / 2);
+  const padBottom = 14;
+  const cy0 = Math.floor(SH - padBottom);
+  const Rmax = Math.min(SW * 0.46, (SH - padBottom - 10));
 
-     // 居中原点
-const cx0 = Math.floor(SW / 2);
-const cy0 = Math.floor(SH / 2);
-const Rmax = Math.min(SW, SH) * 0.42;
+  // mapping: theta in [0..PI], 0=left, PI/2=up (mono), PI=right
+  const toXY = (theta: number, radius: number) => {
+    const x = cx0 + Rmax * radius * Math.cos(theta);
+    const y = cy0 - Rmax * radius * Math.sin(theta); // y向上：用减号
+    return { x, y };
+  };
+  // --- grid (draw in SAME coord system) ---
+  stereoCtx.save();
+  stereoCtx.strokeStyle = "rgba(0,0,0,0.07)";
+  stereoCtx.lineWidth = 1;
 
-      stereoCtx.clearRect(0, 0, SW, SH);
+  // arcs
+  for (let rr = 0.25; rr <= 1.0; rr += 0.25) {
+    stereoCtx.beginPath();
+    for (let deg = 0; deg <= 180; deg += 2) {
+      const a = (Math.PI / 180) * deg;
+      const { x, y } = toXY(a, rr);
+      if (deg === 0) stereoCtx.moveTo(x, y);
+      else stereoCtx.lineTo(x, y);
+    }
+    stereoCtx.stroke();
+  }
 
-      // grid
-      stereoCtx.save();
-      stereoCtx.strokeStyle = "rgba(0,0,0,0.07)";
-      stereoCtx.lineWidth = 1;
-      for (let r = 0.25; r <= 1.0; r += 0.25) {
-        stereoCtx.beginPath();
-        stereoCtx.arc(cx0, cy0, Rmax * r, -Math.PI / 2, Math.PI / 2);
-        stereoCtx.stroke();
+  // radial lines (0,45,90,135,180)
+  [0, 45, 90, 135, 180].forEach((deg) => {
+    const a = (Math.PI / 180) * deg;
+    const p1 = toXY(a, 0);
+    const p2 = toXY(a, 1);
+    stereoCtx.beginPath();
+    stereoCtx.moveTo(p1.x, p1.y);
+    stereoCtx.lineTo(p2.x, p2.y);
+    stereoCtx.stroke();
+  });
+
+  stereoCtx.restore();
+
+  const BINS = 181;
+  const histO = new Float32Array(BINS);
+  const histD = new Float32Array(BINS);
+
+  const prof = DEVICE_PROFILES[deviceKeyRef.current];
+  const mono = bypassRef.current || deviceKeyRef.current === "flat" ? 0 : prof.mono;
+  const avgDb = avgAttDb(prof.anchors);
+  const avgLin = Math.pow(10, avgDb / 20);
+
+  // --- build hist + sparkles ---
+  for (let i = 0; i < n; i++) {
+    const L = timeL[i], R = timeR[i];
+
+    // fold to upper semicircle
+    const La = Math.abs(L);
+    const Ra = Math.abs(R);
+
+    let theta = 2 * Math.atan2(Ra, La); // 0..PI
+    theta = Math.max(0, Math.min(Math.PI, theta));
+    const r = Math.min(1, Math.sqrt(L * L + R * R));
+
+    const bin = Math.min(BINS - 1, Math.max(0, Math.floor((theta / Math.PI) * (BINS - 1))));
+    histO[bin] += r;
+
+    const Ld = avgLin * ((1 - mono / 2) * L + (mono / 2) * R);
+    const Rd = avgLin * ((1 - mono / 2) * R + (mono / 2) * L);
+
+    const Lda = Math.abs(Ld);
+    const Rda = Math.abs(Rd);
+
+    let thetaD = 2 * Math.atan2(Rda, Lda);
+    thetaD = Math.max(0, Math.min(Math.PI, thetaD));
+    const rD = Math.min(1, Math.sqrt(Ld * Ld + Rd * Rd));
+
+    const binD = Math.min(BINS - 1, Math.max(0, Math.floor((thetaD / Math.PI) * (BINS - 1))));
+    histD[binD] += rD;
+
+    // sparkles (same coord system, no save/restore transforms)
+    if ((i & 7) === 0) {
+      const pO = toXY(theta, r);
+      stereoCtx.globalAlpha = 0.28;
+      stereoCtx.fillStyle = "rgba(0,0,0,0.45)";
+      stereoCtx.fillRect(pO.x, pO.y, 1.25, 1.25);
+
+      const pD = toXY(thetaD, rD);
+      stereoCtx.globalAlpha = 0.55;
+      stereoCtx.fillStyle = PURPLE;
+      stereoCtx.fillRect(pD.x, pD.y, 1.25, 1.25);
+    }
+  }
+  stereoCtx.globalAlpha = 1;
+
+  const smoothNorm = (src: Float32Array) => {
+    const out = new Float32Array(src.length);
+    for (let i = 0; i < src.length; i++) {
+      let s = 0, c = 0;
+      for (let k = -2; k <= 2; k++) {
+        const j = Math.min(src.length - 1, Math.max(0, i + k));
+        s += src[j]; c++;
       }
-      [-60, -30, 0, 30, 60].forEach((deg) => {
-        const a = (Math.PI / 180) * deg;
-        const x = cx0 + Rmax * Math.cos(a);
-        const y = cy0 + Rmax * Math.sin(a);
-        stereoCtx.beginPath();
-        stereoCtx.moveTo(cx0, cy0);
+      out[i] = s / c;
+    }
+    let m = 1e-6;
+    for (const v of out) m = Math.max(m, v);
+    for (let i = 0; i < out.length; i++) out[i] /= m;
+    return out;
+  };
+
+  const rO = smoothNorm(histO);
+  const rDev = smoothNorm(histD);
+
+  // --- outlines ---
+  stereoCtx.beginPath();
+  for (let i = 0; i < BINS; i++) {
+    const theta = (i / (BINS - 1)) * Math.PI;
+    const rr = Math.max(rO[i], 0.01);
+    const { x, y } = toXY(theta, rr);
+    if (i === 0) stereoCtx.moveTo(x, y);
+    else stereoCtx.lineTo(x, y);
+  }
+  stereoCtx.strokeStyle = "rgba(0,0,0,0.55)";
+  stereoCtx.lineWidth = 2;
+  stereoCtx.stroke();
+
+  stereoCtx.beginPath();
+  for (let i = 0; i < BINS; i++) {
+    const theta = (i / (BINS - 1)) * Math.PI;
+    const rr = Math.max(rDev[i], 0.01);
+    const { x, y } = toXY(theta, rr);
+    if (i === 0) stereoCtx.moveTo(x, y);
+    else stereoCtx.lineTo(x, y);
+  }
+  stereoCtx.strokeStyle = PURPLE;
+  stereoCtx.lineWidth = 2;
+  stereoCtx.stroke();
+
+  // --- shaded angles where device loses ≥ threshold ---
+  if (!bypassRef.current && deviceKeyRef.current !== "flat") {
+    const ratioTh = Math.pow(10, -cutDbRef.current / 20);
+    stereoCtx.fillStyle = PURPLE_SOFT;
+
+    let i = 0;
+    while (i < BINS) {
+      while (i < BINS && !(rDev[i] <= rO[i] * ratioTh)) i++;
+      if (i >= BINS) break;
+      const start = i;
+      while (i < BINS && rDev[i] <= rO[i] * ratioTh) i++;
+      const end = i - 1;
+
+      stereoCtx.beginPath();
+      for (let j = start; j <= end; j++) {
+        const theta = (j / (BINS - 1)) * Math.PI;
+        const rr = Math.max(rO[j], 0.01);
+        const { x, y } = toXY(theta, rr);
+        if (j === start) stereoCtx.moveTo(x, y);
+        else stereoCtx.lineTo(x, y);
+      }
+      for (let j = end; j >= start; j--) {
+        const theta = (j / (BINS - 1)) * Math.PI;
+        const rr = Math.max(rDev[j], 0.01);
+        const { x, y } = toXY(theta, rr);
         stereoCtx.lineTo(x, y);
-        stereoCtx.stroke();
-      });
-      stereoCtx.restore();
-
-      const BINS = 181;
-      const histO = new Float32Array(BINS);
-      const histD = new Float32Array(BINS);
-
-      const prof = DEVICE_PROFILES[deviceKeyRef.current];
-      const mono = bypassRef.current || deviceKeyRef.current === "flat" ? 0 : prof.mono;
-      const avgDb = avgAttDb(prof.anchors);
-      const avgLin = Math.pow(10, avgDb / 20);
-
-      for (let i = 0; i < n; i += 1) {
-        const L = timeL[i], R = timeR[i];
-
-        let ang = Math.atan2(R, L);
-        ang = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, ang));
-        let r = Math.min(1, Math.sqrt(L * L + R * R));
-        let bin = Math.min(BINS - 1, Math.max(0, Math.floor(((ang + Math.PI / 2) / Math.PI) * (BINS - 1))));
-        histO[bin] += r;
-
-        const Ld = avgLin * ((1 - mono / 2) * L + (mono / 2) * R);
-        const Rd = avgLin * ((1 - mono / 2) * R + (mono / 2) * L);
-        let angD = Math.atan2(Rd, Ld);
-        angD = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, angD));
-        let rD = Math.min(1, Math.sqrt(Ld * Ld + Rd * Rd));
-        let binD = Math.min(BINS - 1, Math.max(0, Math.floor(((angD + Math.PI / 2) / Math.PI) * (BINS - 1))));
-        histD[binD] += rD;
-
-        if ((i & 7) === 0) {
-          const plot = (a: number, radius: number, color: string, alpha = 0.55) => {
-            const x = cx0 + Rmax * radius * Math.cos(a);
-            const y = cy0 + Rmax * radius * Math.sin(a);
-            stereoCtx.globalAlpha = alpha;
-            stereoCtx.fillStyle = color;
-            stereoCtx.fillRect(x, y, 1.25, 1.25);
-          };
-          plot(ang, r, "rgba(0,0,0,0.45)", 0.28);
-          plot(angD, rD, PURPLE, 0.55);
-        }
       }
-
-      const smoothNorm = (src: Float32Array) => {
-        const out = new Float32Array(src.length);
-        for (let i = 0; i < src.length; i++) {
-          let s = 0, c = 0;
-          for (let k = -2; k <= 2; k++) { const j = Math.min(src.length - 1, Math.max(0, i + k)); s += src[j]; c++; }
-          out[i] = s / c;
-        }
-        let m = 1e-6; for (const v of out) m = Math.max(m, v);
-        for (let i = 0; i < out.length; i++) out[i] /= m;
-        return out;
-      };
-
-      const rO = smoothNorm(histO);
-      const rD = smoothNorm(histD);
-
-      // outlines
-      stereoCtx.beginPath();
-      for (let i = 0; i < BINS; i++) {
-        const t = i / (BINS - 1);
-        const a = -Math.PI / 2 + t * Math.PI;
-        const x = cx0 + Rmax * rO[i] * Math.cos(a);
-        const y = cy0 + Rmax * rO[i] * Math.sin(a);
-        if (i === 0) stereoCtx.moveTo(x, y); else stereoCtx.lineTo(x, y);
-      }
-      stereoCtx.strokeStyle = "rgba(0,0,0,0.55)";
-      stereoCtx.lineWidth = 2; stereoCtx.stroke();
-
-      stereoCtx.beginPath();
-      for (let i = 0; i < BINS; i++) {
-        const t = i / (BINS - 1);
-        const a = -Math.PI / 2 + t * Math.PI;
-        const x = cx0 + Rmax * rD[i] * Math.cos(a);
-        const y = cy0 + Rmax * rD[i] * Math.sin(a);
-        if (i === 0) stereoCtx.moveTo(x, y); else stereoCtx.lineTo(x, y);
-      }
-      stereoCtx.strokeStyle = PURPLE;
-      stereoCtx.lineWidth = 2; stereoCtx.stroke();
-
-      // shaded angles where device loses ≥ threshold
-      if (!bypassRef.current && deviceKeyRef.current !== "flat") {
-        const ratioTh = Math.pow(10, -cutDbRef.current / 20);
-        stereoCtx.fillStyle = PURPLE_SOFT;
-        let i = 0;
-        while (i < BINS) {
-          while (i < BINS && !(rD[i] <= rO[i] * ratioTh)) i++;
-          if (i >= BINS) break;
-          const start = i;
-          while (i < BINS && rD[i] <= rO[i] * ratioTh) i++;
-          const end = i - 1;
-
-          stereoCtx.beginPath();
-          for (let j = start; j <= end; j++) {
-            const t = j / (BINS - 1);
-            const a = -Math.PI / 2 + t * Math.PI;
-            const x = cx0 + Rmax * rO[j] * Math.cos(a);
-            const y = cy0 + Rmax * rO[j] * Math.sin(a);
-            if (j === start) stereoCtx.moveTo(x, y); else stereoCtx.lineTo(x, y);
-          }
-          for (let j = end; j >= start; j--) {
-            const t = j / (BINS - 1);
-            const a = -Math.PI / 2 + t * Math.PI;
-            const x = cx0 + Rmax * rD[j] * Math.cos(a);
-            const y = cy0 + Rmax * rD[j] * Math.sin(a);
-            stereoCtx.lineTo(x, y);
-          }
-          stereoCtx.closePath();
-          stereoCtx.fill();
-        }
-      }
+      stereoCtx.closePath();
+      stereoCtx.fill();
+    }
+  }
+}
 
       rafIdRef.current = requestAnimationFrame(draw);
     };
@@ -774,6 +811,53 @@ const Rmax = Math.min(SW, SH) * 0.42;
       try { await a.play(); } catch {}
     })();
   }, [mounted, url]);
+  useEffect(() => {
+  const a = audioRef.current;
+  if (!mounted || !a) return;
+
+  let raf = 0;
+
+  const onLoaded = () => {
+    setDur(Number.isFinite(a.duration) ? a.duration : 0);
+    setPos(a.currentTime || 0);
+  };
+
+  const loop = () => {
+    setPos(a.currentTime || 0);
+    raf = requestAnimationFrame(loop);
+  };
+
+  const onPlay = () => {
+    setIsPlaying(true);
+    cancelAnimationFrame(raf);
+    raf = requestAnimationFrame(loop);
+  };
+
+  const onPause = () => {
+    setIsPlaying(false);
+    cancelAnimationFrame(raf);
+    setPos(a.currentTime || 0);
+  };
+
+  a.addEventListener("loadedmetadata", onLoaded);
+  a.addEventListener("durationchange", onLoaded);
+  a.addEventListener("play", onPlay);
+  a.addEventListener("pause", onPause);
+  a.addEventListener("ended", onPause);
+
+  // 如果已经有 metadata（比如热更新后）
+  if (a.readyState >= 1) onLoaded();
+
+  return () => {
+    cancelAnimationFrame(raf);
+    a.removeEventListener("loadedmetadata", onLoaded);
+    a.removeEventListener("durationchange", onLoaded);
+    a.removeEventListener("play", onPlay);
+    a.removeEventListener("pause", onPause);
+    a.removeEventListener("ended", onPause);
+  };
+}, [mounted]);
+
 
   const sliderMax = Math.max(1, Math.floor(dur));
   const sliderVal = Math.min(Math.floor(pos), sliderMax);
